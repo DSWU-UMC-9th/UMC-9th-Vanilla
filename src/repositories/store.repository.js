@@ -1,29 +1,41 @@
-import { pool } from "../db.config.js";
+// src/repositories/store.repository.js
+import { prisma } from "../db.config.js";
 
+/**
+ * data: { region_id, name, address, score }
+ */
 export const addStore = async (data) => {
-  const conn = await pool.getConnection();
+  // region 존재 여부 확인
+  const region = await prisma.region.findUnique({
+    where: { id: data.region_id },
+  });
 
-  try {
-    // region 존재 여부 확인
-    const [region] = await conn.query(
-      "SELECT * FROM region WHERE id = ?",
-      [data.region_id]
-    );
-
-    if (region.length === 0) {
-      return { success: false, message: "존재하지 않는 지역입니다." };
-    }
-
-    // store 추가
-    const [result] = await conn.query(
-      "INSERT INTO store (region_id, name, address, score) VALUES (?, ?, ?, ?)",
-      [data.region_id, data.name, data.address, data.score]
-    );
-
-    return { success: true, storeId: result.insertId };
-  } catch (err) {
-    throw new Error(`DB 오류: ${err}`);
-  } finally {
-    conn.release();
+  if (!region) {
+    return { success: false, message: "존재하지 않는 지역입니다." };
   }
+
+  const created = await prisma.store.create({
+    data: {
+      region_id: data.region_id,
+      name: data.name,
+      address: data.address,
+      score: data.score,
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  return { success: true, storeId: created.id };
+};
+
+export const getStoreById = async (storeId) => {
+  const store = await prisma.store.findUnique({
+    where: { id: BigInt(storeId) },
+    include: {
+      region: true,
+      mission: true,
+      review: true,
+    },
+  });
+  return store;
 };

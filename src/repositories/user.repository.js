@@ -1,133 +1,98 @@
-import { pool } from "../db.config.js";
+import { prisma } from "../db.config.js";
 
-// User 데이터 삽입
+// ✅ 유저 생성 (이메일 중복 확인 포함)
 export const addUser = async (data) => {
-  const conn = await pool.getConnection();
+  // 이메일 중복 확인
+  const exist = await prisma.member.findUnique({
+    where: { email: data.email },
+  });
 
-  try {
-    const [confirm] = await pool.query(
-      `SELECT EXISTS(SELECT 1 FROM user WHERE email = ?) as isExistEmail;`,
-      data.email
-    );
+  if (exist) return null;
 
-    if (confirm[0].isExistEmail) {
-      return null;
-    }
+  // 새 멤버 추가
+  const newUser = await prisma.member.create({
+    data: {
+      email: data.email,
+      name: data.name,
+      gender: data.gender,
+      address: data.address,
+      spec_address: data.detailAddress,
+      // Prisma에서는 created_at / updated_at을 자동 생성 안 하므로 직접 넣어도 돼
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
 
-    const [result] = await pool.query(
-      `INSERT INTO user (email, name, gender, birth, address, detail_address, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?);`,
-      [
-        data.email,
-        data.name,
-        data.gender,
-        data.birth,
-        data.address,
-        data.detailAddress,
-        data.phoneNumber,
-      ]
-    );
-
-    return result.insertId;
-  } catch (err) {
-    throw new Error(
-      `오류가 발생했어요. 요청 파라미터를 확인해주세요. (${err})`
-    );
-  } finally {
-    conn.release();
-  }
+  return newUser.id;
 };
 
-// 사용자 정보 얻기
+// ✅ 유저 조회
 export const getUser = async (userId) => {
-  const conn = await pool.getConnection();
+  const user = await prisma.member.findUnique({
+    where: { id: BigInt(userId) },
+  });
 
-  try {
-    const [user] = await pool.query(`SELECT * FROM user WHERE id = ?;`, userId);
-
-    console.log(user);
-
-    if (user.length == 0) {
-      return null;
-    }
-
-    return user;
-  } catch (err) {
-    throw new Error(
-      `오류가 발생했어요. 요청 파라미터를 확인해주세요. (${err})`
-    );
-  } finally {
-    conn.release();
-  }
+  return user ? [user] : [];
 };
 
-// 음식 선호 카테고리 매핑
+// ✅ 음식 선호 카테고리 매핑
 export const setPreference = async (userId, foodCategoryId) => {
-  const conn = await pool.getConnection();
-
-  try {
-    await pool.query(
-      `INSERT INTO user_favor_category (food_category_id, user_id) VALUES (?, ?);`,
-      [foodCategoryId, userId]
-    );
-
-    return;
-  } catch (err) {
-    throw new Error(
-      `오류가 발생했어요. 요청 파라미터를 확인해주세요. (${err})`
-    );
-  } finally {
-    conn.release();
-  }
+  await prisma.member_prefer.create({
+    data: {
+      member_id: BigInt(userId),
+      category_id: BigInt(foodCategoryId),
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
 };
 
-// 사용자 선호 카테고리 반환
+// ✅ 사용자 선호 카테고리 반환
 export const getUserPreferencesByUserId = async (userId) => {
-  const conn = await pool.getConnection();
+  const preferences = await prisma.member_prefer.findMany({
+    where: { member_id: BigInt(userId) },
+    include: {
+      food_category: {
+        select: { name: true },
+      },
+    },
+    orderBy: {
+      category_id: "asc",
+    },
+  });
 
-  try {
-    const [preferences] = await pool.query(
-      "SELECT ufc.id, ufc.food_category_id, ufc.user_id, fcl.name " +
-        "FROM user_favor_category ufc JOIN food_category fcl on ufc.food_category_id = fcl.id " +
-        "WHERE ufc.user_id = ? ORDER BY ufc.food_category_id ASC;",
-      userId
-    );
-
-    return preferences;
-  } catch (err) {
-    throw new Error(
-      `오류가 발생했어요. 요청 파라미터를 확인해주세요. (${err})`
-    );
-  } finally {
-    conn.release();
-  }
+  // SQL에서 SELECT alias 맞추던 것처럼 가공
+  return preferences.map((p) => ({
+    id: p.id,
+    food_category_id: p.category_id,
+    user_id: p.member_id,
+    name: p.food_category?.name || null,
+  }));
 };
 
-// member_mission 테이블 사용
+// ✅ 미션 도전 (member_mission)
 export const addMissionToUser = async (userId, missionId) => {
-  const conn = await pool.getConnection();
-  try {
-    // 이미 도전 중인지 확인
-    const [exist] = await conn.query(
-      `SELECT COUNT(*) as count FROM member_mission WHERE member_id = ? AND mission_id = ?;`,
-      [userId, missionId]
-    );
+  // 이미 존재하는지 확인
+  const exist = await prisma.member_mission.findFirst({
+    where: {
+      member_id: BigInt(userId),
+      mission_id: BigInt(missionId),
+    },
+  });
 
-    if (exist[0].count > 0) {
-      return { success: false, message: "이미 도전 중인 미션입니다." };
-    }
-
-    // 도전 추가
-    const [result] = await conn.query(
-      `INSERT INTO member_mission (member_id, mission_id, status, created_at, updated_at)
-       VALUES (?, ?, 'IN_PROGRESS', NOW(6), NOW(6));`,
-      [userId, missionId]
-    );
-
-    return { success: true, memberMissionId: result.insertId };
-  } catch (err) {
-    throw new Error(`DB 오류: ${err}`);
-  } finally {
-    conn.release();
+  if (exist) {
+    return { success: false, message: "이미 도전 중인 미션입니다." };
   }
-};
 
+  const newMission = await prisma.member_mission.create({
+    data: {
+      member_id: BigInt(userId),
+      mission_id: BigInt(missionId),
+      status: "IN_PROGRESS",
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+  });
+
+  return { success: true, memberMissionId: newMission.id };
+};
