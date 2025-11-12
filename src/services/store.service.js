@@ -1,14 +1,13 @@
-// src/services/store.service.js
 import * as storeRepository from "../repositories/store.repository.js";
+import { responseFromReviews } from "../dtos/store.dto.js";
 
 export const createStore = async (data) => {
   if (!data.region_id || !data.name || !data.address || data.score === undefined) {
     throw new Error("필수 필드 누락");
   }
 
-  // 여기서 region_id가 숫자/문자열로 들어오면 BigInt 변환은 repository에서 해도 되고
   const payload = {
-    region_id: BigInt(data.region_id),
+    region_id: Number(data.region_id),
     name: data.name,
     address: data.address,
     score: Number(data.score),
@@ -21,4 +20,14 @@ export const createStore = async (data) => {
   }
 
   return result.storeId;
+};
+
+export const listStoreReviews = async (storeId, cursor) => {
+  const reviews = await storeRepository.getAllStoreReviews(storeId, cursor);
+  return responseFromReviews(reviews);
+};
+
+export const getStoreReviews = async (storeId, cursor = 0) => {
+  const reviews = await storeRepository.getAllStoreReviews(storeId, cursor);
+  return responseFromReviews(reviews);
 };

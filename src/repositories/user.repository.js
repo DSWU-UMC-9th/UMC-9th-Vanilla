@@ -1,9 +1,8 @@
 import { prisma } from "../db.config.js";
 
-// ✅ 유저 생성 (이메일 중복 확인 포함)
 export const addUser = async (data) => {
   // 이메일 중복 확인
-  const exist = await prisma.member.findUnique({
+  const exist = await prisma.member.findFirst({
     where: { email: data.email },
   });
 
@@ -17,7 +16,7 @@ export const addUser = async (data) => {
       gender: data.gender,
       address: data.address,
       spec_address: data.detailAddress,
-      // Prisma에서는 created_at / updated_at을 자동 생성 안 하므로 직접 넣어도 돼
+      status: "ACTIVE",
       created_at: new Date(),
       updated_at: new Date(),
     },
@@ -26,31 +25,28 @@ export const addUser = async (data) => {
   return newUser.id;
 };
 
-// ✅ 유저 조회
 export const getUser = async (userId) => {
   const user = await prisma.member.findUnique({
-    where: { id: BigInt(userId) },
+    where: { id: userId },
   });
 
   return user ? [user] : [];
 };
 
-// ✅ 음식 선호 카테고리 매핑
 export const setPreference = async (userId, foodCategoryId) => {
   await prisma.member_prefer.create({
     data: {
-      member_id: BigInt(userId),
-      category_id: BigInt(foodCategoryId),
+      member_id: userId,
+      category_id: foodCategoryId,
       created_at: new Date(),
       updated_at: new Date(),
     },
   });
 };
 
-// ✅ 사용자 선호 카테고리 반환
 export const getUserPreferencesByUserId = async (userId) => {
   const preferences = await prisma.member_prefer.findMany({
-    where: { member_id: BigInt(userId) },
+    where: { member_id: userId },
     include: {
       food_category: {
         select: { name: true },
@@ -61,7 +57,6 @@ export const getUserPreferencesByUserId = async (userId) => {
     },
   });
 
-  // SQL에서 SELECT alias 맞추던 것처럼 가공
   return preferences.map((p) => ({
     id: p.id,
     food_category_id: p.category_id,
@@ -70,13 +65,12 @@ export const getUserPreferencesByUserId = async (userId) => {
   }));
 };
 
-// ✅ 미션 도전 (member_mission)
 export const addMissionToUser = async (userId, missionId) => {
   // 이미 존재하는지 확인
   const exist = await prisma.member_mission.findFirst({
     where: {
-      member_id: BigInt(userId),
-      mission_id: BigInt(missionId),
+      member_id: userId,
+      mission_id: missionId,
     },
   });
 
@@ -86,8 +80,8 @@ export const addMissionToUser = async (userId, missionId) => {
 
   const newMission = await prisma.member_mission.create({
     data: {
-      member_id: BigInt(userId),
-      mission_id: BigInt(missionId),
+      member_id: userId,
+      mission_id: missionId,
       status: "IN_PROGRESS",
       created_at: new Date(),
       updated_at: new Date(),

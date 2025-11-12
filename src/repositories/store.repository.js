@@ -1,11 +1,9 @@
-// src/repositories/store.repository.js
 import { prisma } from "../db.config.js";
 
 /**
  * data: { region_id, name, address, score }
  */
 export const addStore = async (data) => {
-  // region 존재 여부 확인
   const region = await prisma.region.findUnique({
     where: { id: data.region_id },
   });
@@ -30,7 +28,7 @@ export const addStore = async (data) => {
 
 export const getStoreById = async (storeId) => {
   const store = await prisma.store.findUnique({
-    where: { id: BigInt(storeId) },
+    where: { id: Number(storeId) },
     include: {
       region: true,
       mission: true,
@@ -38,4 +36,29 @@ export const getStoreById = async (storeId) => {
     },
   });
   return store;
+};
+
+export const getAllStoreReviews = async (storeId, cursor = 0) => {
+  const reviews = await prisma.review.findMany({
+    where: {
+      store_id: Number(storeId),
+      id: { gt: cursor },
+    },
+    select: {
+      id: true,
+      body: true,
+      score: true,
+      created_at: true,
+      member: {
+        select: {
+          name: true,
+          id: true,
+        },
+      },
+    },
+    orderBy: { id: "asc" },
+    take: 5,
+  });
+
+  return reviews;
 };

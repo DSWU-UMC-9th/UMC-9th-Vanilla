@@ -8,7 +8,7 @@ datasource db {
 }
 
 model food_category {
-  id            BigInt          @id @default(autoincrement())
+  id            Int          @id @default(autoincrement())
   name          String?         @db.VarChar(15)
   created_at    DateTime?       @db.DateTime(6)
   updated_at    DateTime?       @db.DateTime(6)
@@ -16,7 +16,7 @@ model food_category {
 }
 
 model member {
-  id             BigInt           @id @default(autoincrement())
+  id             Int           @id @default(autoincrement())
   name           String?          @db.VarChar(20)
   gender         String?          @db.VarChar(20)
   age            Int?
@@ -37,9 +37,9 @@ model member {
 }
 
 model member_agree {
-  id         BigInt    @id @default(autoincrement())
-  member_id  BigInt?
-  terms_id   BigInt?
+  id         Int    @id @default(autoincrement())
+  member_id  Int?
+  terms_id   Int?
   created_at DateTime? @db.DateTime(6)
   updated_at DateTime? @db.DateTime(6)
   member     member?   @relation(fields: [member_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "member_agree_ibfk_1")
@@ -50,9 +50,9 @@ model member_agree {
 }
 
 model member_mission {
-  id         BigInt    @id @default(autoincrement())
-  member_id  BigInt?
-  mission_id BigInt?
+  id         Int    @id @default(autoincrement())
+  member_id  Int?
+  mission_id Int?
   status     String?   @db.VarChar(13)
   created_at DateTime? @db.DateTime(6)
   updated_at DateTime? @db.DateTime(6)
@@ -64,9 +64,9 @@ model member_mission {
 }
 
 model member_prefer {
-  id            BigInt         @id @default(autoincrement())
-  member_id     BigInt?
-  category_id   BigInt?
+  id            Int         @id @default(autoincrement())
+  member_id     Int?
+  category_id   Int?
   created_at    DateTime?      @db.DateTime(6)
   updated_at    DateTime?      @db.DateTime(6)
   member        member?        @relation(fields: [member_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "member_prefer_ibfk_1")
@@ -77,8 +77,8 @@ model member_prefer {
 }
 
 model mission {
-  id             BigInt           @id @default(autoincrement())
-  store_id       BigInt?
+  id             Int           @id @default(autoincrement())
+  store_id       Int?
   reward         Int?
   deadline       DateTime?        @db.DateTime(0)
   mission_spec   String?          @db.Text
@@ -91,7 +91,7 @@ model mission {
 }
 
 model region {
-  id         BigInt    @id @default(autoincrement())
+  id         Int    @id @default(autoincrement())
   name       String?   @db.VarChar(20)
   created_at DateTime? @db.DateTime(6)
   updated_at DateTime? @db.DateTime(6)
@@ -99,9 +99,9 @@ model region {
 }
 
 model review {
-  id           BigInt         @id @default(autoincrement())
-  member_id    BigInt?
-  store_id     BigInt?
+  id           Int         @id @default(autoincrement())
+  member_id    Int?
+  store_id     Int?
   body         String?        @db.Text
   score        Float?         @db.Float
   created_at   DateTime?      @db.DateTime(6)
@@ -115,8 +115,8 @@ model review {
 }
 
 model review_image {
-  id         BigInt    @id @default(autoincrement())
-  review_id  BigInt?
+  id         Int    @id @default(autoincrement())
+  review_id  Int?
   image_url  String?   @db.Text
   created_at DateTime? @db.DateTime(6)
   updated_at DateTime? @db.DateTime(6)
@@ -126,8 +126,8 @@ model review_image {
 }
 
 model store {
-  id         BigInt    @id @default(autoincrement())
-  region_id  BigInt?
+  id         Int    @id @default(autoincrement())
+  region_id  Int?
   name       String?   @db.VarChar(50)
   address    String?   @db.VarChar(50)
   score      Float?    @db.Float
@@ -141,7 +141,7 @@ model store {
 }
 
 model terms {
-  id           BigInt         @id @default(autoincrement())
+  id           Int         @id @default(autoincrement())
   title        String?        @db.VarChar(20)
   body         String?        @db.Text
   optional     Boolean?
